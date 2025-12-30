@@ -1,0 +1,79 @@
+#
+# Test for MDEV-35254: PARSEC plugin should allow DBAs to specify number of iterations
+#
+
+source include/platform.inc;
+source include/not_embedded.inc;
+
+if (`select count(*) = 0 from information_schema.plugins where plugin_name = 'parsec'`)
+{
+  --skip Needs parsec plugin
+}
+
+if (!$PARSEC_SO) {
+  skip No auth_parsec plugin;
+}
+
+--echo #
+--echo # Basic visibility and default value
+--echo #
+
+--disable_result_log
+select @@global.parsec_iterations;
+--enable_result_log
+
+--echo #
+--echo # Valid power-of-two values should be accepted
+--echo #
+
+set global parsec_iterations = 1024;
+select @@global.parsec_iterations;
+
+set global parsec_iterations = 262144;
+select @@global.parsec_iterations;
+
+--echo #
+--echo # Values should be rounded UP to next power of two
+--echo #
+
+--echo # 5000 -> 8192
+set global parsec_iterations = 5000;
+select @@global.parsec_iterations;
+
+--echo # 131073 -> 262144
+set global parsec_iterations = 131073;
+select @@global.parsec_iterations;
+
+--echo #
+--echo # Lower bound enforcement
+--echo #
+
+set global parsec_iterations = 512;
+select @@global.parsec_iterations;
+
+--echo #
+--echo # Upper bound enforcement
+--echo #
+
+set global parsec_iterations = 2097152;
+select @@global.parsec_iterations;
+
+--echo #
+--echo # Session variable must not exist
+--echo #
+
+--error ER_INCORRECT_GLOBAL_LOCAL_VAR
+select @@session.parsec_iterations;
+
+--error ER_GLOBAL_VARIABLE
+set session parsec_iterations = 1024;
+
+--echo #
+--echo # parsec_iterations should should not get accidently mutated during user creation
+--echo #
+
+set @iter_before := @@global.parsec_iterations;
+create user t_iter@'%' identified via parsec using password('pwd');
+select @@global.parsec_iterations = @iter_before;
+drop user t_iter@'%';
+

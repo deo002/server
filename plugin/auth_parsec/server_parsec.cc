@@ -38,6 +38,52 @@ constexpr size_t PBKDF2_HASH_LENGTH= ED25519_KEY_LENGTH;
 constexpr size_t CLIENT_RESPONSE_LENGTH= CHALLENGE_SCRAMBLE_LENGTH
                                          + ED25519_SIG_LENGTH;
 
+constexpr unsigned int PARSEC_ITERATIONS_DEFAULT= 1u << 18;
+constexpr unsigned int PARSEC_ITERATIONS_MIN= 1u << 10;
+constexpr unsigned int PARSEC_ITERATIONS_MAX= 1u << 19;
+constexpr unsigned int PARSEC_ITERATIONS_STEP= 1u;
+constexpr unsigned int ITER_FACTOR_BASE_VAL= 10u;
+
+static unsigned int iterations= PARSEC_ITERATIONS_DEFAULT;
+
+static inline unsigned int round_to_power_of_two(const unsigned int x) {
+  unsigned int p = 1;
+  while (p < x)
+    p <<= 1;
+  return p;
+}
+
+
+static inline unsigned int log_2_of_power_of_2(const unsigned int x) {
+  // function will not work correctly for non power of 2 unsigned integers
+  unsigned int p = 0;
+  while ((1u << p) != x)
+    p++;
+  return p;
+}
+
+
+static void update_parsec_iterations(MYSQL_THD thd,
+              struct st_mysql_sys_var *var  __attribute__((unused)),
+              void *var_ptr  __attribute__((unused)), const void *save)
+{
+  unsigned int iterations_user_input= *(unsigned int *) save;
+  iterations= round_to_power_of_two(iterations_user_input);
+  if (iterations != iterations_user_input)
+    my_printf_error(ER_WRONG_VALUE_FOR_VAR, "parsec: parsec_iterations rounded up to %d (next supported value)",
+      ME_WARNING, iterations);
+}
+
+static MYSQL_SYSVAR_UINT(iterations, iterations, PLUGIN_VAR_NOCMDOPT,
+       "Number of iterations to be used when generating the key corresponding to the password",
+       NULL, update_parsec_iterations, PARSEC_ITERATIONS_DEFAULT, PARSEC_ITERATIONS_MIN,
+       PARSEC_ITERATIONS_MAX, PARSEC_ITERATIONS_STEP);
+
+static struct st_mysql_sys_var* system_vars[] = {
+    MYSQL_SYSVAR(iterations),
+    NULL
+};
+
 constexpr size_t base64_length(size_t input_length)
 {
   return ((input_length + 2) / 3) * 4; // with padding
@@ -95,7 +141,7 @@ int compute_derived_key(const char* password, size_t pass_len,
 {
   assert(params->algorithm == 'P');
   int ret = PKCS5_PBKDF2_HMAC(password, (int)pass_len, params->salt,
-                              sizeof(params->salt), 1024 << params->iterations,
+                              sizeof(params->salt), 1024u << params->iterations,
                               EVP_sha512(), PBKDF2_HASH_LENGTH, derived_key);
   if(ret == 0)
     return print_ssl_error();
@@ -176,7 +222,7 @@ int hash_password(const char *password, size_t password_length,
 
   Passwd_in_memory memory;
   memory.algorithm= 'P';
-  memory.iterations= 0;
+  memory.iterations= log_2_of_power_of_2(iterations) - ITER_FACTOR_BASE_VAL;
   my_random_bytes(memory.salt, sizeof(memory.salt));
 
   uchar derived_key[PBKDF2_HASH_LENGTH];
@@ -204,10 +250,11 @@ int digest_to_binary(const char *hash, size_t hash_length,
 {
   auto stored= (Passwd_as_stored*)hash;
   auto memory= (Passwd_in_memory*)out;
+  const uchar ITER_MAX_VAL= '0' + (log_2_of_power_of_2(PARSEC_ITERATIONS_MAX) - ITER_FACTOR_BASE_VAL);
 
   if (hash_length != sizeof (*stored) || *out_length < sizeof(*memory) ||
       stored->algorithm != 'P' ||
-      stored->iterations < '0' || stored->iterations > '3' ||
+      stored->iterations < '0' || stored->iterations > ITER_MAX_VAL ||
       stored->colon != ':' || stored->colon2 != ':')
   {
     my_printf_error(ER_PASSWD_LENGTH, "Wrong ext-salt format", 0);
@@ -313,7 +360,7 @@ maria_declare_plugin(auth_parsec)
   NULL,
   0x0100,
   NULL,
-  NULL,
+  system_vars,
   "1.0",
   MariaDB_PLUGIN_MATURITY_GAMMA
 }

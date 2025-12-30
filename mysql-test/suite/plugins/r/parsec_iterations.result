@@ -1,0 +1,66 @@
+#
+# Basic visibility and default value
+#
+select @@global.parsec_iterations;
+#
+# Valid power-of-two values should be accepted
+#
+set global parsec_iterations = 1024;
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+1024
+set global parsec_iterations = 262144;
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+262144
+#
+# Values should be rounded UP to next power of two
+#
+# 5000 -> 8192
+set global parsec_iterations = 5000;
+Warnings:
+Warning	1231	parsec: parsec_iterations rounded up to 8192 (next supported value)
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+8192
+# 131073 -> 262144
+set global parsec_iterations = 131073;
+Warnings:
+Warning	1231	parsec: parsec_iterations rounded up to 262144 (next supported value)
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+262144
+#
+# Lower bound enforcement
+#
+set global parsec_iterations = 512;
+Warnings:
+Warning	1292	Truncated incorrect parsec_iterations value: '512'
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+1024
+#
+# Upper bound enforcement
+#
+set global parsec_iterations = 2097152;
+Warnings:
+Warning	1292	Truncated incorrect parsec_iterations value: '2097152'
+select @@global.parsec_iterations;
+@@global.parsec_iterations
+524288
+#
+# Session variable must not exist
+#
+select @@session.parsec_iterations;
+ERROR HY000: Variable 'parsec_iterations' is a GLOBAL variable
+set session parsec_iterations = 1024;
+ERROR HY000: Variable 'parsec_iterations' is a GLOBAL variable and should be set with SET GLOBAL
+#
+# parsec_iterations should should not get accidently mutated during user creation
+#
+set @iter_before := @@global.parsec_iterations;
+create user t_iter@'%' identified via parsec using password('pwd');
+select @@global.parsec_iterations = @iter_before;
+@@global.parsec_iterations = @iter_before
+1
+drop user t_iter@'%';
