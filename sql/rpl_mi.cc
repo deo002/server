@@ -28,6 +28,10 @@
 
 static void init_master_log_pos(Master_info* mi);
 
+static void init_ssl_config(Master_info* mi);
+
+static void init_connection_config(Master_info* mi);
+
 Master_info::Master_info(LEX_CSTRING *connection_name_arg,
                          bool is_slave_recovery):
    Master_info_file(ignore_server_ids, domain_id_filter.m_domain_ids[0],
@@ -177,8 +181,33 @@ void Master_info::clear_in_memory_info(bool all)
     host[0] = 0; user[0] = 0; password[0] = 0;
     domain_id_filter.clear_ids();
     reset_dynamic(&ignore_server_ids);
+    init_ssl_config(this);
+    init_connection_config(this);
   }
 }
+
+
+void init_ssl_config(Master_info* mi)
+{
+  DBUG_ENTER("init_ssl_config");
+  mi->master_ssl= 1;
+  mi->master_ssl_verify_server_cert= 0;
+  mi->master_ssl_ca= nullptr; mi->master_ssl_capath= nullptr; mi->master_ssl_cert= nullptr;
+  mi->master_ssl_cipher= nullptr; mi->master_ssl_key= nullptr; mi->master_ssl_crl= nullptr;
+  mi->master_ssl_crlpath= nullptr;
+  DBUG_VOID_RETURN;
+}
+
+
+void init_connection_config(Master_info* mi)
+{
+  DBUG_ENTER("init_connection_config");
+  mi->connect_retry= 0;
+  mi->retry_count= 0;
+  mi->connects_tried= 0;
+  DBUG_VOID_RETURN;
+}
+
 
 void init_master_log_pos(Master_info* mi)
 {
