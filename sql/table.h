@@ -2505,6 +2505,7 @@ struct TABLE_CHAIN
 };
 
 class Table_ident;
+class Lex_tablesample;
 struct TABLE_LIST
 {
   TABLE_LIST(THD *thd,
@@ -2519,7 +2520,8 @@ struct TABLE_LIST
              bool info_schema,
              st_select_lex *sel,
              List<Index_hint> *index_hints_ptr,
-             LEX_STRING *option_ptr);
+             LEX_STRING *option_ptr,
+             Lex_tablesample *tablesample);
 
   TABLE_LIST() = default;                          /* Remove gcc warning */
 
@@ -3038,6 +3040,8 @@ struct TABLE_LIST
   IS_table_read_plan *is_table_read_plan;
 
   MDL_request mdl_request;
+
+  Lex_tablesample *tablesample;
 
 #ifdef WITH_PARTITION_STORAGE_ENGINE
   /* List to carry partition names from PARTITION (...) clause in statement */

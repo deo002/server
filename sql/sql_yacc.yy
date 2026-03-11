@@ -246,6 +246,7 @@ void _CONCAT_UNDERSCORED(turn_parser_debug_on,yyparse)()
   Json_table_column::On_response json_on_response;
   Lex_substring_spec_st substring_spec;
   vers_history_point_t vers_history_point;
+  Lex_tablesample *tablesample;
   struct
   {
     enum sub_select_type unit_type;
@@ -264,7 +265,6 @@ void _CONCAT_UNDERSCORED(turn_parser_debug_on,yyparse)()
     bool with_unique_keys;
     ulong type_constraint;
   } json_predicate;
-
   /* pointers */
   Lex_ident_sys *ident_sys_ptr;
   Create_field *create_field;
@@ -363,6 +363,7 @@ void _CONCAT_UNDERSCORED(turn_parser_debug_on,yyparse)()
   enum Column_definition::enum_column_versioning vers_column_versioning;
   enum plsql_cursor_attr_t plsql_cursor_attr;
   enum Alter_info::enum_alter_table_algorithm alter_table_algo_val;
+  enum enum_tablesample_type tablesample_type_val;
   enum_master_use_gtid master_use_gtid;
   privilege_t privilege;
   struct
@@ -752,6 +753,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, size_t *yystacksize);
 %token  <kwd> XOR
 %token  <kwd> YEAR_MONTH_SYM
 %token  <kwd> ZEROFILL
+%token  <kwd> TABLESAMPLE_SYM               /* SQL-2016-R */
 
 
 /*
@@ -1210,6 +1212,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, size_t *yystacksize);
 %token  <kwd>  XML_SYM
 %token  <kwd>  YEAR_SYM                      /* SQL-2003-R */
 %token  <kwd>   ST_COLLECT_SYM
+%token  <kwd>  BERNOULLI_SYM
 /* A dummy token to force the priority of table_ref production in a join. */
 %left   CONDITIONLESS_JOIN
 %left   JOIN_SYM INNER_SYM STRAIGHT_JOIN CROSS LEFT RIGHT ON_SYM USING
@@ -1746,6 +1749,9 @@ rule:
 %type <string_list>
         using_list opt_use_partition use_partition
 
+%type <tablesample>
+        opt_tablesample_clause
+
 %type <key_part>
         key_part key_part_simple
 
@@ -2047,6 +2053,7 @@ rule:
 %type <optional_uint> uint64_or_default
 %type <tril> bool_or_default
 %type <master_use_gtid> master_use_gtid_enum
+%type <tablesample_type_val> sampling_method
 
 
 %ifdef MARIADB
@@ -12681,14 +12688,14 @@ join_table_parens:
 
 table_primary_ident:
           table_ident opt_use_partition opt_for_system_time_clause
-          opt_table_alias_clause opt_key_definition
+          opt_table_alias_clause opt_key_definition opt_tablesample_clause
           {
             if (!($$= Select->add_table_to_list(thd, $1, $4,
                                                 0,
                                                 YYPS->m_lock_type,
                                                 YYPS->m_mdl_type,
                                                 Select->pop_index_hints(),
-                                                $2)))
+                                                $2, 0, $6)))
               MYSQL_YYABORT;
             if ($3)
               $$->vers_conditions= Lex->vers_conditions;
@@ -12809,6 +12816,21 @@ using_list:
               MYSQL_YYABORT;
             $$= $1;
           }
+        ;
+
+opt_tablesample_clause:
+        /* empty */ { $$=0; }
+        | TABLESAMPLE_SYM sampling_method '(' NUM_literal ')'
+          {
+            $$= new (thd->mem_root) Lex_tablesample($2, $4);
+            if (!$$)
+              YYABORT;
+          }
+        ;
+        
+sampling_method:
+          SYSTEM { $$= TABLESAMPLE_SYSTEM; }
+        | BERNOULLI_SYM { $$= TABLESAMPLE_BERNOULLI; }
         ;
 
 interval:

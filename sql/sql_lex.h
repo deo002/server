@@ -154,6 +154,24 @@ enum enum_sp_aggregate_type
 };
 
 
+enum enum_tablesample_type
+{
+  TABLESAMPLE_UNDEF= 0,
+  TABLESAMPLE_SYSTEM,
+  TABLESAMPLE_BERNOULLI
+};
+
+class Lex_tablesample: public Sql_alloc
+{
+public:
+  enum_tablesample_type tablesample_type;
+  Item *percentage;
+
+  Lex_tablesample(enum_tablesample_type m, Item *p)
+    : tablesample_type(m), percentage(p) {}
+};
+
+
 /* These may not be declared yet */
 class Table_ident;
 class sql_exchange;
@@ -346,7 +364,6 @@ typedef struct st_lex_server_options
     option_list= NULL;
   }
 } LEX_SERVER_OPTIONS;
-
 
 /**
   Structure to hold parameters for CHANGE MASTER, START SLAVE, and STOP SLAVE.
@@ -1387,7 +1404,8 @@ public:
                                 enum_mdl_type mdl_type= MDL_SHARED_READ,
                                 List<Index_hint> *hints= 0,
                                 List<String> *partition_names= 0,
-                                LEX_STRING *option= 0);
+                                LEX_STRING *option= 0,
+                                Lex_tablesample *tablesample= 0);
   TABLE_LIST* get_table_list();
   bool init_nested_join(THD *thd);
   TABLE_LIST *end_nested_join(THD *thd);

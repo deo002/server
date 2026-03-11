@@ -6087,13 +6087,15 @@ TABLE_LIST::TABLE_LIST(THD *thd,
                        bool info_schema,
                        st_select_lex *sel,
                        List<Index_hint> *index_hints_ptr,
-                       LEX_STRING *option_ptr)
+                       LEX_STRING *option_ptr,
+                       Lex_tablesample *tablesample)
 {
   reset();
   db= Lex_ident_db(db_str);
   is_fqtn= fqtn;
   alias= alias_str;
   is_alias= has_alias_ptr;
+  tablesample= tablesample;
 
   if (lower_case_table_names)
   {

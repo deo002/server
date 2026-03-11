@@ -8097,8 +8097,9 @@ TABLE_LIST *st_select_lex::add_table_to_list(THD *thd,
 					     thr_lock_type lock_type,
 					     enum_mdl_type mdl_type,
 					     List<Index_hint> *index_hints_arg,
-                                             List<String> *partition_names,
-                                             LEX_STRING *option)
+               List<String> *partition_names,
+               LEX_STRING *option,
+               Lex_tablesample *tablesample)
 {
   DBUG_ENTER("add_table_to_list");
   DBUG_PRINT("enter", ("Table '%s' (%p)  Select %p (%u)",
@@ -8170,7 +8171,7 @@ TABLE_LIST *st_select_lex::add_table_to_list(THD *thd,
                                               has_alias_ptr, table, lock_type,
                                               mdl_type, table_options,
                                               info_schema, this,
-                                              index_hints_arg, option);
+                                              index_hints_arg, option, tablesample);
   if (!ptr->table_name.str)
     DBUG_RETURN(0); // EOM
 
