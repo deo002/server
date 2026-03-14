@@ -37,6 +37,7 @@
 #include "sql_type.h"               /* vers_kind_t */
 #include "privilege.h"              /* privilege_t */
 #include "my_bit.h"
+#include "tablesample.h"
 
 /*
   Buffer for unix timestamp in microseconds:

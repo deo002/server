@@ -6088,14 +6088,14 @@ TABLE_LIST::TABLE_LIST(THD *thd,
                        st_select_lex *sel,
                        List<Index_hint> *index_hints_ptr,
                        LEX_STRING *option_ptr,
-                       Lex_tablesample *tablesample)
+                       Lex_tablesample *tablesample_arg)
 {
   reset();
   db= Lex_ident_db(db_str);
   is_fqtn= fqtn;
   alias= alias_str;
   is_alias= has_alias_ptr;
-  tablesample= tablesample;
+  tablesample= tablesample_arg;
 
   if (lower_case_table_names)
   {

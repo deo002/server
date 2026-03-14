@@ -8528,6 +8528,10 @@ bool setup_tables(THD *thd, Name_resolution_context *context,
       }
       DBUG_ASSERT(item == table_list->jtbm_subselect->optimizer);
     }
+
+    if (table_list->tablesample && table_list->tablesample->fix_and_set_tablesample_percentage(thd)) {
+      DBUG_RETURN(1);
+    }
   }
 
   /* Precompute and store the row types of NATURAL/USING joins. */

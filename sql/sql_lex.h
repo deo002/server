@@ -154,24 +154,6 @@ enum enum_sp_aggregate_type
 };
 
 
-enum enum_tablesample_type
-{
-  TABLESAMPLE_UNDEF= 0,
-  TABLESAMPLE_SYSTEM,
-  TABLESAMPLE_BERNOULLI
-};
-
-class Lex_tablesample: public Sql_alloc
-{
-public:
-  enum_tablesample_type tablesample_type;
-  Item *percentage;
-
-  Lex_tablesample(enum_tablesample_type m, Item *p)
-    : tablesample_type(m), percentage(p) {}
-};
-
-
 /* These may not be declared yet */
 class Table_ident;
 class sql_exchange;
@@ -203,6 +185,7 @@ class Pushdown_select;
 class Opt_hints_global;
 class Opt_hints_qb;
 class Optimizer_hint_parser_output;
+class Lex_tablesample;
 
 #define ALLOC_ROOT_SET 1024
 

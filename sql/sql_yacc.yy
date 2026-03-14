@@ -73,6 +73,7 @@
 #include "json_table.h"
 #include "sql_update.h"
 #include "sql_delete.h"
+#include "tablesample.h"
 
 /* this is to get the bison compilation windows warnings out */
 #ifdef _MSC_VER
